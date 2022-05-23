@@ -20,5 +20,4 @@ At the conclusion of this course student will be able to
 2) organize data analyses and make these analyses sharable and reproducible; 
 3) perform exploratory data analysis to generate hypotheses and intuition about the data; 
 4) communicate results through visualization, stories, and interpretable summaries.
-![image](https://user-images.githubusercontent.com/13842085/169852724-04d94b17-76e9-4648-a226-9cd078b3e9c3.png)
 
