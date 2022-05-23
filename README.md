@@ -1,9 +1,9 @@
 # Short Course #1
 
-## Dates
+### Dates
 May 30, 2022 - June 10, 2022
 
-## Instructors
+### Instructors
 * Dr. Heather Mattie
 * Dr. Elphas Okango
 
