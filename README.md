@@ -1,4 +1,4 @@
-# Short Course #1
+# Short Course #1: Statistical Computing for Data Science
 
 ### Dates
 May 30, 2022 - June 10, 2022
