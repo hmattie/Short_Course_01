@@ -1,0 +1,278 @@
+---
+title: "Data Wrangling"
+output: html_document
+---
+
+### String splitting
+
+Another very common data wrangling operation is string splitting. To illustrate how this comes up, we start with an illustrative example. Suppose we did not have the function `read_csv` available to use. We instead have to read a csv file using the base R function `readLines` like this:
+
+```{r, message=FALSE}
+library(tidyverse)
+
+filename <- system.file("extdata/murders.csv", package = "dslabs")
+lines    <- readLines(filename)
+```
+
+This function reads in the data line-by-line to create a vector of strings. In this case one string for each row in the spreadsheet. The first six lines are:
+
+```{r}
+lines %>% head()
+```
+
+We want to extract the values that are separated by a comma for each string in the vector. The command `str_split` does exactly this:
+
+```{r}
+x <- str_split(lines, ",") 
+x %>% head()
+```
+
+Note that the first entry has the column names so we can separate that out:
+
+```{r}
+col_names <- x[[1]]
+col_names
+
+```
+
+```{r}
+x <- x[-1]
+head(x)
+```
+
+To covert our list into a data frame we can use a shortcut provided by the `map` function in the purrr package. **The map function applies the same function to each element in a list**. So if we want to extract the first entry of each element in `x` we can write
+
+```{r}
+library(purrr)
+map(x, function(y) y[1]) %>% head()
+```
+
+However, because this is such a common task, `purrr` provides a shortcut: if the second argument, instead of a function receives an integer, it assumes we want that entry:
+
+```{r}
+map(x, 1) %>% head()
+```
+
+For map to return a character vector instead of a list, we can use `map_chr`. Similarly, `map_int` returns integers. So to create our data frame we can use:
+
+
+```{r}
+dat <- data.frame(map_chr(x, 1),  
+                  map_chr(x, 2),
+                  map_chr(x, 3),
+                  map_chr(x, 4),
+                  map_chr(x, 5),
+                  stringsAsFactors = FALSE) %>%
+  mutate_all(parse_guess) %>%
+  setNames(col_names)
+dat %>% head
+```
+
+Using other functions included in the purrr package we can accomplish this with more efficient code:
+
+```{r}
+dat <- x %>% transpose() %>%
+             map( ~ parse_guess(unlist(.))) %>%
+             setNames(col_names) %>% 
+             as.data.frame() 
+```
+
+It turns out we can use the function argument `simplify=TRUE` to have `str_split` return a matrix instead of a data frame:
+
+```{r}
+x <- str_split(lines, ",", simplify = TRUE) 
+col_names <- x[1,]
+x <- x[-1,]
+x <- x %>% as_tibble() %>%
+  setNames(col_names) %>%
+  mutate_all(parse_guess)
+head(x)
+```
+
+### Case study 3: Extracing a table from a PDF
+
+One of the datasets provided in dslabs shows scientific funding rates by gender in the Netherlands:
+
+```{r}
+library(dslabs)
+data("research_funding_rates")
+research_funding_rates 
+```
+
+The data comes from a [paper](http://www.pnas.org/content/112/40/12349.abstract) published in the prestigious journal PNAS. However, the data is not provided in a spreadsheet, it is in a table in a PDF document:
+
+```{r, echo=FALSE}
+knitr::include_graphics("pnas-table-s1.png")
+```
+
+We could extract the numbers by hand, but this could lead to human error. Instead we can try to wrangle the data using R. We start by downloading the pdf document then importing into R. I have saved the paper as `pnas_article.pdf`.
+
+```{r}
+library("pdftools")
+
+txt <- pdf_text("pnas_article.pdf")
+```
+
+```{r}
+txt
+```
+
+
+If we examine the object text we notice that it is a character vector with an entry for each page. So we keep the page we want:
+
+```{r, eval=FALSE}
+raw_data_research_funding_rates <- txt[2]
+```
+
+The steps above can actually be skipped because we include this raw data in the dslabs package as well
+
+```{r}
+data("raw_data_research_funding_rates")
+```
+
+Examining this object
+
+```{r}
+raw_data_research_funding_rates %>% head
+```
+
+we see that it is a long string and each line on the page, including the table rows, are separated by the symbol for newline: `\n`. We can therefore create a list of the lines of the text as elements:
+
+```{r}
+tab <- str_split(raw_data_research_funding_rates, "\n")
+tab
+```
+
+Because we start off with just one element in the string we end up with a list with just one entry.
+
+```{r}
+tab <- tab[[1]]
+```
+
+By examining this object
+
+```{r}
+tab %>% head
+```
+
+we see that the information for the column names is the third and forth entries:
+
+```{r}
+the_names_1 <- tab[3]
+the_names_2 <- tab[4]
+```
+
+In the table the column information is spread across two lines. We want to create one vector with one name for each column. Using some of the functions we have just learned we do this:
+
+Let's start with the first line
+
+```{r}
+the_names_1
+```
+
+We want to remove the leading space and the the stuff following the comma. We use regex for the latter. The we can obtain the elements by splitting using the space. We want to split only when there is 2 or more spaces to avoid splitting `success rate`. So we use the regex `\\s{2,}`
+
+```{r}
+the_names_1 <- the_names_1 %>%
+  str_trim() %>%
+  str_replace_all(",\\s.", "") %>%
+  str_split("\\s{2,}", simplify = TRUE)
+the_names_1
+```
+
+
+Now looking at the second line:
+
+```{r}
+the_names_2
+```
+
+Here we want to trim the leading space and then split by space as we did for the first line:
+
+```{r}
+the_names_2 <- the_names_2 %>%
+  str_trim() %>%
+  str_split("\\s+", simplify = TRUE)
+the_names_2
+```
+
+Now we can join these to generate one name for each column:
+
+
+```{r}
+tmp_names <- str_c(rep(the_names_1, each = 3), the_names_2[-1], sep = "_")
+tmp_names
+```
+
+```{r}
+the_names <- c(the_names_2[1], tmp_names) %>%
+  str_to_lower() %>%
+  str_replace_all("\\s", "_")
+the_names
+```
+
+Now we are ready to get the actual data. By examining the `tab` object we notice that the information is in lines 6 through 14. We can use `str_split` again to achieve our goal:
+
+```{r}
+new_research_funding_rates <- tab[6:14] %>%
+  str_trim %>%
+  str_split("\\s{2,}", simplify = TRUE) %>%
+  data.frame(stringsAsFactors = FALSE) %>%
+  setNames(the_names) %>%
+  mutate_at(-1, parse_number)
+new_research_funding_rates %>% head()
+```
+
+We can see that the objects are identical:
+
+```{r}
+identical(research_funding_rates, new_research_funding_rates)
+```
+
+### Recoding
+
+Another common operation involving strings is recoding the names of categorical variables. For example, if you have really long names for your levels and you will be displaying them in plots, you might want to use shorter versions of these names. For example, in a character vector with country names you might want to change "United States of America" to "USA" and "United Kingdom" to UK, and so on. We can do this with `case_when` but the tidyverse offers options that are specifically designed for this task: the `recode` function. 
+
+Here is an example showing how to rename countries with long names:
+
+
+```{r}
+library(dslabs)
+data("gapminder")
+```
+
+Suppose we want to show life expectancy time series by country for the Caribbean:
+
+```{r}
+gapminder %>% 
+  filter(region=="Caribbean") %>%
+  ggplot(aes(year, life_expectancy, color = country)) +
+  geom_line()
+```
+
+The plot is what we want but much of the space is wasted to accomodate some of the long country names.
+
+```{r}
+gapminder %>% 
+  filter(region=="Caribbean") %>%
+  filter(str_length(country) >= 12) %>%
+  distinct(country) 
+```
+
+We have four countries with names longer than 12 characters. These names appear once for each year in the gapminder dataset and once we pick nicknames we need to change them all consistently. The `recode` function can be used to do this:
+
+
+```{r}
+gapminder %>% filter(region == "Caribbean") %>%
+  mutate(country = recode(country, 
+                          `Antigua and Barbuda`="Barbuda",
+                          `Dominican Republic` = "DR",
+                          `St. Vincent and the Grenadines` = "St. Vincent",
+                          `Trinidad and Tobago` = "Trinidad")) %>%
+  ggplot(aes(year, life_expectancy, color = country)) +
+  geom_line()
+```
+
+Other similar functions include `recode_factor` and `fct_recoder` in the forcats tidyverse package.
+
+

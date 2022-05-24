@@ -1,0 +1,69 @@
+---
+title: 'Day 5: String processing continued'
+output: html_document
+---
+
+### Problem 1: Extracting a table from a pdf
+
+For this problem, we'll be using the table shown on the first page of <https://www.who.int/docs/default-source/coronaviruse/situation-reports/20200809-covid-19-sitrep-202.pdf?sfvrsn=2c7459f6_2>. It has a list of coronavirus cases and deaths by geographic region of the world. The first step is to import the table:
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyverse)
+library(pdftools)
+library(stringr)
+library(lubridate)
+```
+
+```{r import_table}
+temp_file <- tempfile()
+url <- "https://www.who.int/docs/default-source/coronaviruse/situation-reports/20200809-covid-19-sitrep-202.pdf?sfvrsn=2c7459f6_2"
+download.file(url, temp_file, mode="wb")
+txt <- pdf_text(temp_file)
+file.remove(temp_file)
+raw_covid <- txt[1]
+raw_covid
+```
+
+Here we have an array of length 1, with the table contents written as a string. There's a bunch of text at the beginning that we don't need - so let's get rid of everything before "(new cases in last 24 hours)" using the `str_sub` and `str_locate` functions.
+
+```{r split_string}
+raw_covid <- raw_covid %>% 
+  str_sub(str_locate(raw_covid, "\\(new cases in last 24 hours\\)\n")[1,2]+1,
+          nchar(raw_covid))
+tab <- str_split(raw_covid, "\n")
+tab <- tab[[1]]
+tab
+```
+
+Now we have an array with 9 entries. The first and last entries are empty, but the others have a geographic region, followed by a bunch of space, followed by total overall cases, with new daily cases in parentheses, followed by a bunch of space, followed by total overall deaths, with new daily deaths in parentheses. There is also weird spacing in the numbers that we will want to fix. We want to transform this into a `data.frame` with 5 columns - `area`, `total_cases`, `daily_cases` `total_deaths`, `daily_deaths`.
+
+#### Part (a) 
+Create the `data.frame` described above. This involves splitting the string based on spaces of length > 2 using the `str_split` function, converting to a `data.frame`, naming the original three columns, removing the last empty row, separating `total_cases` into `total_cases` and `daily_cases` (hint: use the `separate` function with `sep="cases"`), and separating `total_deaths` into `total_deaths` and `daily_deaths` (hint: use the `separate` function with `sep="deaths"`). You can leave the numbers messy - we will fix this in the next question.
+
+**Solution:**
+```{r convert_df}
+new_covid <- tab %>%
+  str_split("\\s{2,}", simplify = TRUE)  %>%
+  data.frame() %>%
+  setNames(c("area", "total_cases", "total_deaths")) %>%
+  .[2:8,] %>%
+  separate(total_cases, c("total_cases","daily_cases"), sep = "cases") %>%
+  separate(total_deaths, c("total_deaths","daily_deaths"), sep = "deaths")
+
+
+new_covid
+```
+
+#### Part (b) 
+Now that we have our `data.frame` we want to do two things: remove the spaces in the `total_cases`, `daily_cases`, `total_deaths`, and `daily_deaths` columns, and remove the parentheses in the `daily_cases` and `daily_deaths` columns (this can be done using `mutate_at` and `str_replace_all`) Then convert the numbers to numeric using `as.numeric` so we can manipulate them later. Recall that to match `(` and `)` you'll need to use `\\(` and `\\)` respectively, as these are special characters.
+
+**Solution:**
+```{r pretty_table}
+new_covid = new_covid %>% 
+                mutate_at(-1,str_replace_all," |\\(|\\)", "") %>%
+                mutate_at(-1, as.numeric)
+
+new_covid
+```

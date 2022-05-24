@@ -1,0 +1,102 @@
+---
+title: 'Day 3: Data wrangling'
+output: html_document
+---
+
+In this lab we'll continue with data wrangling and perform web scraping and convert dates. 
+
+### 1. Web scraping
+
+We'll go over this example from class a bit slower so we can understand what the different functions are doing and what each object contains.
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyr)
+library(dplyr)
+library(dslabs)
+library(rvest)
+
+# Wikipedia article to scrape
+url <- "https://en.wikipedia.org/w/index.php?title=2009_swine_flu_pandemic_tables&oldid=950511922"
+
+# If you are unable to access Wikipedia, uncomment and use the following 
+# line to read in the saved HTML file of the webpage
+# url = "h1n1_wiki_tables.html"
+
+# Extract all tables in the page
+tab = read_html(url) %>% html_nodes("table")
+
+tab
+
+cases_df <- tab %>% .[1] %>% html_table %>% .[[1]]
+deaths_df <- tab %>% .[2] %>% html_table %>% .[[1]]
+
+
+# Variable names to use for the table of case counts
+case_names <- c("by_date", "by_continent", "country", "first_case",
+                "April", "May", "June", "July", "August", "latest")
+# Variable names to use for the table of death counts
+death_names <- c("by_date", "by_continent", "country", "first_death",
+                 "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+cases_df <- tab %>% .[1] %>% html_table %>% .[[1]] %>% setNames(case_names)
+deaths_df <- tab %>% .[2] %>% html_table %>% .[[1]] %>% setNames(death_names)
+
+```
+
+Now let's give it a try ourselves. Let's try to scrape the table with the human development index from the following Wikipedia page: https://en.wikipedia.org/wiki/List_of_countries_by_Human_Development_Index
+
+
+
+Some resources on web scraping with R: 
+https://www.analyticsvidhya.com/blog/2017/03/beginners-guide-on-web-scraping-in-r-using-rvest-with-hands-on-knowledge/
+
+https://www.youtube.com/watch?v=4IYfYx4yoAI
+
+```{r}
+#install.packages('rvest')
+library(rvest)
+
+url <- "https://en.wikipedia.org/w/index.php?title=List_of_countries_by_Human_Development_Index&oldid=1043741772"
+
+# If you are unable to access Wikipedia, uncomment and use the following 
+# line to read in the saved HTML file of the webpage
+# url = "hdi_wiki_list.html"
+
+```
+
+##### 1) How many columns does our table include? Do we need all of them? Select only the ones that we need.
+
+```{r}
+colnames(table2)
+
+```
+
+
+##### 2) Now let's join the table we just created with a table that includes gdp per capita by country for the last year that it's available, which is 2011. What will we join by? What type of join function is most appropriate?
+
+```{r}
+
+
+```
+
+
+### 2. Date manipulation
+
+Let's use the table we scraped earlier as an example (the `cases_df` data frame) with the date of the first swine flu case in each country.
+
+Calling the `str()` function, we can see that the column for the date of the first case is a string, which means that R understands the contents as a set of characters and not as a date. So if we try to order our data frame by the date of the first case, R won't do a good job.
+
+But we can use the function ymd() to convert into a date. Then we can use the converted date column to arrange our data frame according to the date of the first case.
+
+```{r}
+str(cases_df)
+```
+
+##### 1) Convert the `first_case` column to a date and arrange the data frame by the `first_case` date.
+
+##### 2) Calculate the time difference between each country's first case and the previous country's first case using the `lag()` function, and save it into a column called `first_case_diff`.
+
+```{r, message=FALSE, warning=FALSE}
+library(lubridate)
+
+```
