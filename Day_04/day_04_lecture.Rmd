@@ -68,14 +68,6 @@ dat <- data.frame(map_chr(x, 1),
 dat %>% head
 ```
 
-Using other functions included in the purrr package we can accomplish this with more efficient code:
-
-```{r}
-dat <- x %>% transpose() %>%
-             map( ~ parse_guess(unlist(.))) %>%
-             setNames(col_names) %>% 
-             as.data.frame() 
-```
 
 It turns out we can use the function argument `simplify=TRUE` to have `str_split` return a matrix instead of a data frame:
 

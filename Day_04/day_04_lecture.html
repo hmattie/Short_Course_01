@@ -494,12 +494,6 @@ dat %&gt;% head</code></pre>
 ## 4   Arkansas  AR  South    2915918    93
 ## 5 California  CA   West   37253956  1257
 ## 6   Colorado  CO   West    5029196    65</code></pre>
-<p>Using other functions included in the purrr package we can accomplish
-this with more efficient code:</p>
-<pre class="r"><code>dat &lt;- x %&gt;% transpose() %&gt;%
-             map( ~ parse_guess(unlist(.))) %&gt;%
-             setNames(col_names) %&gt;% 
-             as.data.frame() </code></pre>
 <p>It turns out we can use the function argument
 <code>simplify=TRUE</code> to have <code>str_split</code> return a
 matrix instead of a data frame:</p>
