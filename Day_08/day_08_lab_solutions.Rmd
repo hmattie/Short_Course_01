@@ -1,0 +1,158 @@
+---
+title: 'Day 8 Lab Solutions'
+output: html_document
+---
+
+In May 2020, the [Georgia Department of Public Health](https://dph.georgia.gov/covid-19-daily-status-report) posted the following plot to illustrate the number of confirmed COVID-19 cases in their hardest-hit counties over a two-week period. 
+
+![](georgia_dph_bad.png)
+
+The plot was heavily criticized by the statistical community and several media outlets for its deceptive portrayal of COVID-19 trends in Georgia. Whether the end result was due to malicious intent or simply poor judgment, it is incredibly irresponsible to publish data visualizations that obscure and distort the truth. 
+
+In this lab, we will pretend that we are data scientists tasked with the job of making better COVID-19 visualizations. This will also give us an opportunity to practice making more aesthetically pleasing plots using the `ggplot2` package. For the remainder of the course, you will be expected to use `ggplot2` any time you create a plot.
+
+We will use the [*New York Times* COVID-19 data](https://github.com/nytimes/covid-19-data) to get county-level information for Georgia. The numbers look slightly different from the ones reported by the Georgia DPH, but that's okay for our purposes. The code below reads in the the data through September 30, 2020 that is saved in the `us-counties.csv` file in the lab folder. If you would like to pull the most up-to-date version of the data, you can replace `read_csv("us-counties.csv")` with `read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv")` in the code below. 
+
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+
+# Replace "us-counties.csv" with 
+# "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
+# to pull most up-to-date version from Github
+us_counties = read_csv("us-counties.csv")
+```
+
+This lab (particularly questions 10 and 11) borrows ideas and code from Peter Ellis's [blog post](http://freerangestats.info/blog/2020/05/23/ordering-in-bar-charts). 
+
+
+1. Create a new data frame called `georgia_counties` that only contains the data from Georgia. Add a new variable called `new_cases` that stores the number of new confirmed cases for each day at the county level. Hint: the `lag` function returns the previous values in a vector. 
+
+**Solution:** 
+
+Note that `group_by(county)` ensures that the new cases are calculated within each county, and `arrange(date)` sorts the dates in ascending order, to make sure that that the lags are calculated correctly. 
+
+```{r}
+georgia_counties = us_counties %>%
+  filter(state == "Georgia") %>%
+  group_by(county) %>%
+  arrange(date) %>%
+  mutate(new_cases = cases - lag(cases)) %>% 
+  ungroup()
+```
+
+
+2. Today is May 9th, 2020. You want to get a sense of today's distribution of the total number of confirmed cases in each county in Georgia. Make three histograms, one with 10 black bins, one with 30 red bins, and one with 50 blue bins. Include nice axis labels and titles. Use the `grid.arrange` function from the `gridExtra` package to place the three plots next to each other. 
+
+**Solution:** 
+
+First, we can create a new data frame with just the data from May 9, 2020. 
+
+```{r}
+georgia_counties_may9 =  georgia_counties %>% 
+  filter(date == as.Date("2020-05-09"))
+```
+
+Then, we want to create and save the three histograms. The `bins` argument controls the number of bins and the `fill` argument determines what color to fill them in. We can also specify better titles using `ggtitle`, `xlab`, and `ylab`. 
+
+```{r}
+p1 = georgia_counties_may9 %>% 
+  ggplot(aes(x = cases)) + geom_histogram(bins = 10, fill = "black") + 
+  ggtitle("10 bins") + xlab("Cases") + ylab("")
+p2 = georgia_counties_may9 %>% 
+  ggplot(aes(x = cases)) + geom_histogram(bins = 30, fill = "red") + 
+  ggtitle("30 bins") + xlab("Cases") + ylab("")
+p3 = georgia_counties_may9 %>% 
+  ggplot(aes(x = cases)) + geom_histogram(bins = 50, fill = "blue") + 
+  ggtitle("50 bins") + xlab("Cases") + ylab("")
+```
+
+Finally, we can use `grid.arrange` to put the saved histograms side-by-side. 
+
+```{r}
+grid.arrange(p1, p2, p3, ncol = 3)
+```
+
+
+3. A single day doesn't tell the whole story, so you decide to look at the data from the past two weeks, April 26 to May 9, 2020. Boxplots can be easier to interpret than histograms when you are comparing the distributions of multiple groups. Draw boxplots of the total number of confirmed cases in each county by date. Try this with and without a log (base 10) transformation. 
+
+**Solution:** 
+
+Make a data frame that stores only the data from April 26 to May 9, 2020. 
+
+```{r}
+georgia_counties_apr26_may9 = georgia_counties %>% 
+  filter(date >= as.Date("2020-04-26")) %>%
+  filter(date <= as.Date("2020-05-09"))
+```
+
+Here are the boxplots without transforming the data. 
+
+```{r}
+georgia_counties_apr26_may9 %>% 
+  ggplot(aes(x = date, y = cases, group = date)) + 
+  geom_boxplot() + 
+  xlab("Date") + ylab("Cases")
+```
+
+Here are the boxplots after applying a log transform. 
+
+```{r}
+georgia_counties_apr26_may9 %>% 
+  ggplot(aes(x = date, y = cases, group = date)) + 
+  geom_boxplot() + 
+  xlab("Date") + ylab("Cases (log scale)") + 
+  scale_y_log10()
+```
+
+
+4. From your plots in Questions 2 and 3, it is clear that there are some counties with a lot of cases! It might be useful to study them more closely. Identify the five most impacted counties, which we will take to be the counties with the highest case totals on May 9, 2020. 
+
+**Solution:** 
+
+The `slice_max` function is a nifty way to pull out the five rows of `georgia_counties_may9` with the most cases. 
+
+```{r}
+georgia5_names = georgia_counties_may9 %>%
+  slice_max(order_by = cases, n=5) %>%
+  pull(county) %>% sort()
+
+georgia5_names
+```
+
+
+5. We are not going to spend time bending over backwards to try to re-create the very bad barplot from the Georgia DPH, but Peter Ellis explains how to do it in his [blog post](http://freerangestats.info/blog/2020/05/23/ordering-in-bar-charts). Instead, make an improved clustered barplot of the new cases reported in the 5 most impacted counties between April 26 and May 9. Be sure to order the dates chronologically on the x-axis and maintain the order of the counties within each day's cluster of bars. Does your impression of the COVID-19 situation in Georgia change? 
+
+**Solution:** 
+
+Let's subset the data to only include observations from the top five counties during the last two weeks.  
+
+```{r}
+georgia5_apr26_may9 = georgia_counties %>% 
+  filter(county %in% georgia5_names) %>%
+  filter(date >= as.Date("2020-04-26")) %>%
+  filter(date <= as.Date("2020-05-09"))
+```
+
+Setting `position = position_dodge()` and specifying the barplot group to be `county` gets us the clusters. By default, `ggplot2` orders the dates chronologically and maintains the order of the counties in the clusters. Note that we can specify the legend title to be "County" (or anything else we want) using `scale_fill_discrete(name = "County")`. 
+
+```{r}
+georgia5_apr26_may9 %>% 
+  ggplot(aes(x = date, weight = new_cases, fill = county)) +
+  geom_bar(position = position_dodge(), aes(group = county)) + 
+  xlab("Date") + ylab("New Cases") + scale_fill_discrete(name = "County")
+```
+
+
+6. While much improved, the clustered barplot still makes it difficult to compare trends over time in the five counties. Present the data as a line plot with the date on the x-axis, the number of new cases on the y-axis, and each county plotted as a separate line. 
+
+**Solution:** 
+
+```{r}
+georgia5_apr26_may9 %>% 
+  ggplot(aes(x = date, y = new_cases, color = county)) +
+  geom_line() + 
+  xlab("Date") + ylab("New Cases") + scale_color_discrete(name = "County")
+```

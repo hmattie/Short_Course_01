@@ -1,0 +1,52 @@
+---
+title: "Day 7 Lab"
+output: html_document
+---
+
+In May 2020, the [Georgia Department of Public Health](https://dph.georgia.gov/covid-19-daily-status-report) posted the following plot to illustrate the number of confirmed COVID-19 cases in their hardest-hit counties over a two-week period. 
+
+![](georgia_dph_bad.png)
+
+The plot was heavily criticized by the statistical community and several media outlets for its deceptive portrayal of COVID-19 trends in Georgia. Whether the end result was due to malicious intent or simply poor judgment, it is incredibly irresponsible to publish data visualizations that obscure and distort the truth. 
+
+In this lab, we will pretend that we are data scientists tasked with the job of making better COVID-19 visualizations. This will also give us an opportunity to practice making more aesthetically pleasing plots using the `ggplot2` package. For the remainder of the course, you will be expected to use `ggplot2` any time you create a plot.
+
+We will use the [*New York Times* COVID-19 data](https://github.com/nytimes/covid-19-data) to get county-level information for Georgia. The numbers look slightly different from the ones reported by the Georgia DPH, but that's okay for our purposes. The code below reads in the the data through September 30, 2020 that is saved in the `us-counties.csv` file in the lab folder. If you would like to pull the most up-to-date version of the data, you can replace `read_csv("us-counties.csv")` with `read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv")` in the code below. 
+
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+
+# Replace "us-counties.csv" with 
+# "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
+# to pull most up-to-date version from Github
+us_counties = read_csv("us-counties.csv")
+```
+
+This lab (particularly questions 10 and 11) borrows ideas and code from Peter Ellis's [blog post](http://freerangestats.info/blog/2020/05/23/ordering-in-bar-charts). 
+
+
+1. Create a new data frame called `georgia_counties` that only contains the data from Georgia. Add a new variable called `new_cases` that stores the number of new confirmed cases for each day at the county level. Hint: the `lag` function returns the previous values in a vector. 
+
+
+```{r}
+# Your code here
+```
+
+
+2. Today is May 9th, 2020. You want to get a sense of today's distribution of the total number of confirmed cases in each county in Georgia. Make three histograms, one with 10 black bins, one with 30 red bins, and one with 50 blue bins. Include nice axis labels and titles. Use the `grid.arrange` function from the `gridExtra` package to place the three plots next to each other. 
+
+
+```{r}
+# Your code here
+```
+
+
+3. A single day doesn't tell the whole story, so you decide to look at the data from the past two weeks, April 26 to May 9, 2020. Boxplots can be easier to interpret than histograms when you are comparing the distributions of multiple groups. Draw boxplots of the total number of confirmed cases in each county by date. Try this with and without a log (base 10) transformation. 
+
+
+```{r}
+# Your code here
+```
