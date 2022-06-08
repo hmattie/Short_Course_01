@@ -181,7 +181,7 @@ gdp_data %>%
 Not surprisingly, ggplot defaults to using area rather than radius. Of course, in this case, we really should not be using area at all since we can use position and length: 
 
 ```{r, echo=FALSE}
-gdp_data %>% filter(y == "Area") %>% ggplot(aes(Country, GDP)) + geom_bar(stat = "identity") + ylab("GDP in trillions of US dollars")
+gdp_data %>% filter(y == "Area") %>% ggplot(aes(Country, gdp)) + geom_bar(stat = "identity") + ylab("GDP in trillions of US dollars")
 ```
 
 ### Order by a meaningful value
